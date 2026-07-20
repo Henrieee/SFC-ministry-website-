@@ -115,7 +115,8 @@ function EventEditor({ ev, onSave, onCancel, onDelete }: { ev: AdminEventDoc; on
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSave({ id: id || crypto.randomUUID(), title, date: dateInput, venue, dateLabel, category });
+        // Change line 118 to this:
+onSave({ id: crypto.randomUUID(), title, date: dateInput, venue, dateLabel, category });
       }}
       className="space-y-4"
     >

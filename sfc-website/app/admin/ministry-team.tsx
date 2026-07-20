@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { collection, doc, onSnapshot, orderBy, query, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -8,22 +8,18 @@ type MinistryTeamItem = {
   name: string;
   photoUrl: string;
   order: number;
+  cropZoom?: number;
+  cropX?: number;
+  cropY?: number;
 };
 
-type MinistryRoleKey =
-  | "ministryCoordinator"
-  | "footballLead"
-  | "formulaOneLead"
-  | "devotionLead"
-  | "financeOfficer"
-  | "marketingLead";
+type MinistryRoleKey = "ministryCoordinator" | "footballLead" | "formulaOneLead" | "devotionLead" | "marketingLead";
 
 const ROLE_DOCS: Array<{ key: MinistryRoleKey; roleLabel: string }> = [
   { key: "ministryCoordinator", roleLabel: "Ministry Coordinator" },
   { key: "footballLead", roleLabel: "Football Lead" },
   { key: "formulaOneLead", roleLabel: "Formula One Lead" },
   { key: "devotionLead", roleLabel: "Devotion Lead" },
-  { key: "financeOfficer", roleLabel: "Finance Officer" },
   { key: "marketingLead", roleLabel: "Marketing Lead" },
 ];
 
@@ -37,159 +33,212 @@ function stableInitialsFromName(name: string) {
 }
 
 export default function AdminMinistryTeamManager() {
-  const [items, setItems] = useState<Record<MinistryRoleKey, MinistryTeamItem>>(() => {
-    const base = {} as Record<MinistryRoleKey, MinistryTeamItem>;
-    for (const r of ROLE_DOCS) {
-      base[r.key] = { role: r.roleLabel, name: "", photoUrl: "", order: 0 };
-    }
-    return base;
-  });
-
-  const [busyKey, setBusyKey] = useState<MinistryRoleKey | null>(null);
+  const [items, setItems] = useState<Record<string, MinistryTeamItem>>({});
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     const q = query(collection(db, "ministryTeam"), orderBy("order", "asc"));
-    const unsub = onSnapshot(q, (snap) => {
-      setItems((prev) => {
-        const next = { ...prev };
-        for (const docSnap of snap.docs) {
-          const data = docSnap.data() as Partial<MinistryTeamItem> & { role?: string };
-          const key = docSnap.id as MinistryRoleKey;
-          if (!next[key]) continue;
-          next[key] = {
-            role: ROLE_DOCS.find((r) => r.key === key)?.roleLabel ?? next[key].role,
-            name: typeof data.name === "string" ? data.name : "",
-            photoUrl: typeof data.photoUrl === "string" ? data.photoUrl : "",
-            order: typeof data.order === "number" ? data.order : next[key].order,
-          };
-        }
-        return next;
+    return onSnapshot(q, (snap) => {
+      const next: Record<string, MinistryTeamItem> = {};
+      ROLE_DOCS.forEach(r => {
+        next[r.key] = { role: r.roleLabel, name: "", photoUrl: "", order: 0 };
       });
+      snap.docs.forEach(docSnap => {
+        const data = docSnap.data();
+        next[docSnap.id] = {
+          role: data.role || ROLE_DOCS.find(r => r.key === docSnap.id)?.roleLabel || "",
+          name: data.name || "",
+          photoUrl: data.photoUrl || "",
+          order: data.order || 0,
+          cropZoom: typeof data.cropZoom === "number" ? data.cropZoom : 1,
+          cropX: typeof data.cropX === "number" ? data.cropX : 0,
+          cropY: typeof data.cropY === "number" ? data.cropY : 0,
+        };
+      });
+      setItems(next);
     });
-    return () => unsub();
   }, []);
 
-  const orderedRoles = useMemo(() => {
-    return ROLE_DOCS.map((r, idx) => ({ ...r, order: idx }));
-  }, []);
-
-  async function handleSaveRole(key: MinistryRoleKey, data: { name: string; photoUrl: string }) {
+  async function handleSaveRole(key: string, name: string, photoUrl: string, cropZoom: number, cropX: number, cropY: number) {
     setBusyKey(key);
-    const roleLabel = ROLE_DOCS.find((r) => r.key === key)?.roleLabel ?? items[key].role;
-
-    await setDoc(
-      doc(db, "ministryTeam", key),
-      {
-        role: roleLabel,
-        name: data.name,
-        photoUrl: data.photoUrl,
-        order: orderedRoles.find((r) => r.key === key)?.order ?? items[key].order,
-      },
-      { merge: true }
-    );
-    setBusyKey(null);
+    setError("");
+    try {
+      await setDoc(doc(db, "ministryTeam", key), {
+        role: ROLE_DOCS.find(r => r.key === key)?.roleLabel,
+        name,
+        photoUrl,
+        order: ROLE_DOCS.findIndex(r => r.key === key),
+        cropZoom,
+        cropX,
+        cropY,
+      }, { merge: true });
+    } catch (err) {
+      console.error("Failed to save ministry role", err);
+      setError(`Unable to update ${ROLE_DOCS.find(r => r.key === key)?.roleLabel || key}.`);
+    } finally {
+      setBusyKey(null);
+    }
   }
 
   return (
     <div className="mb-10 animate-fade-in space-y-12">
       <div className="border-b border-[var(--border)] pb-5">
         <h2 className="font-display text-xl text-[var(--text)]">Ministry Team</h2>
-        <p className="text-xs text-[var(--text-dim)] mt-1">Configure profile details for the homepage leadership section cards.</p>
+        <p className="text-xs text-[var(--text-dim)] mt-1">Configure profile details for the homepage leadership section.</p>
       </div>
 
+      {error && (
+        <p className="text-xs text-red-400 bg-red-950/20 border border-red-900/30 rounded-xl px-4 py-3">{error}</p>
+      )}
+
       <div className="grid gap-6">
-        {orderedRoles.map(({ key, roleLabel, order }) => {
-          const item = items[key];
-          return (
-            <MinistryTeamRoleEditor
-              key={key}
-              roleLabel={roleLabel}
-              order={order}
-              item={item}
-              busy={busyKey === key}
-              onSave={(name, photoUrl) => handleSaveRole(key, { name, photoUrl })}
-            />
-          );
-        })}
+        {ROLE_DOCS.map(({ key, roleLabel }) => (
+          <MinistryTeamRoleEditor
+            key={key}
+            roleLabel={roleLabel}
+            item={items[key] || { role: roleLabel, name: "", photoUrl: "", order: 0 }}
+            busy={busyKey === key}
+            onSave={(name: string, photoUrl: string, cropZoom: number, cropX: number, cropY: number) => handleSaveRole(key, name, photoUrl, cropZoom, cropX, cropY)}
+          />
+        ))}
       </div>
     </div>
   );
 }
 
-function MinistryTeamRoleEditor({
-  roleLabel,
-  order,
-  item,
-  busy,
-  onSave,
-}: {
+type MinistryTeamRoleEditorProps = {
   roleLabel: string;
-  order: number;
   item: MinistryTeamItem;
   busy: boolean;
-  onSave: (name: string, photoUrl: string) => Promise<void>;
-}) {
+  onSave: (name: string, photoUrl: string, cropZoom: number, cropX: number, cropY: number) => void;
+};
+
+const sliderClass =
+  "w-full h-1.5 appearance-none rounded-full bg-[var(--surface2)] outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--sfc-red)] [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[var(--surface)] [&::-webkit-slider-thumb]:cursor-pointer";
+
+function MinistryTeamRoleEditor({ roleLabel, item, busy, onSave }: MinistryTeamRoleEditorProps) {
   const [name, setName] = useState(item.name);
   const [photoUrl, setPhotoUrl] = useState(item.photoUrl);
+  const [cropZoom, setCropZoom] = useState(item.cropZoom ?? 1);
+  const [cropX, setCropX] = useState(item.cropX ?? 0);
+  const [cropY, setCropY] = useState(item.cropY ?? 0);
+  const [imgError, setImgError] = useState(false);
+  const [showCrop, setShowCrop] = useState(false);
 
   useEffect(() => {
-    queueMicrotask(() => {
-      setName(item.name);
-      setPhotoUrl(item.photoUrl);
-    });
-  }, [item.name, item.photoUrl]);
+    setName(item.name);
+    setPhotoUrl(item.photoUrl);
+    setCropZoom(item.cropZoom ?? 1);
+    setCropX(item.cropX ?? 0);
+    setCropY(item.cropY ?? 0);
+    setImgError(false);
+  }, [item.name, item.photoUrl, item.cropZoom, item.cropX, item.cropY]);
 
-
-  const initials = stableInitialsFromName(name);
+  const showInitials = !photoUrl || imgError;
+  const initials = stableInitialsFromName(name) || "—";
 
   return (
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 shadow-sm">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
-        <div>
-          <h3 className="font-display text-sm text-[var(--text)]">{roleLabel}</h3>
-          <div className="font-mono-sfc text-[10px] text-[var(--sfc-red)] uppercase tracking-wider mt-0.5">Order index: {order + 1}</div>
-        </div>
-        <div className="w-14 h-14 rounded-2xl border border-[var(--border)] bg-[var(--surface2)] overflow-hidden flex items-center justify-center shrink-0">
-          {photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={photoUrl} alt={roleLabel} className="w-full h-full object-cover" />
+      <div className="flex justify-between items-center mb-5">
+        <h3 className="font-display text-sm text-[var(--text)]">{roleLabel}</h3>
+        <div className="w-14 h-14 rounded-full bg-[var(--surface2)] border border-[var(--border)] overflow-hidden flex items-center justify-center">
+          {showInitials ? (
+            <span className="text-lg font-bold">{initials}</span>
           ) : (
-            <span className="font-display text-lg text-[var(--text-dim)]">{initials || "—"}</span>
+            <div className="w-full h-full overflow-hidden">
+              <img
+                src={photoUrl}
+                alt={`${roleLabel} photo`}
+                className="w-full h-full"
+                style={{
+                  objectFit: "cover",
+                  transform: `scale(${cropZoom}) translate(${cropX}px, ${cropY}px)`,
+                }}
+                onError={() => setImgError(true)}
+              />
+            </div>
           )}
         </div>
       </div>
-
       <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="block font-mono-sfc text-[10px] uppercase tracking-wider text-[var(--text-dim)] mb-1 pl-1">Name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-xl bg-[var(--surface2)] border border-[var(--border)] px-4 py-2.5 text-sm text-[var(--text)] focus:border-[var(--sfc-red)] outline-none transition"
-            placeholder="e.g. Brian Otieno"
-          />
-        </div>
-        <div>
-          <label className="block font-mono-sfc text-[10px] uppercase tracking-wider text-[var(--text-dim)] mb-1 pl-1">Photo URL</label>
-          <input
-            value={photoUrl}
-            onChange={(e) => setPhotoUrl(e.target.value)}
-            className="w-full rounded-xl bg-[var(--surface2)] border border-[var(--border)] px-4 py-2.5 text-sm text-[var(--text)] focus:border-[var(--sfc-red)] outline-none transition"
-            placeholder="https://..."
-          />
-        </div>
+        <input value={name} onChange={e => setName(e.target.value)} className="w-full rounded-xl bg-[var(--surface2)] border border-[var(--border)] px-4 py-2.5 text-sm" placeholder="Name" />
+        <input value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} className="w-full rounded-xl bg-[var(--surface2)] border border-[var(--border)] px-4 py-2.5 text-sm" placeholder="/leaders/filename.jpg" />
       </div>
 
-      <div className="flex pt-4 mt-4 border-t border-[rgba(255,255,255,0.03)]">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => onSave(name, photoUrl)}
-          className="rounded-full bg-[var(--sfc-red)] px-5 py-2 text-white text-xs font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition disabled:opacity-50"
-        >
-          {busy ? "Saving…" : "Save Changes"}
-        </button>
-      </div>
+      {/* Photo crop section — toggled by button */}
+      {photoUrl && !imgError && (
+        <div className="mt-5 pt-5 border-t border-[var(--border)]">
+          <button
+            type="button"
+            onClick={() => setShowCrop(v => !v)}
+            className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-dim)] hover:text-[var(--text)] transition"
+          >
+            <span className={showCrop ? "rotate-90" : ""}>▶</span>
+            Photo Crop
+          </button>
+
+          {showCrop && (
+            <div className="mt-4 space-y-4">
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-[11px] text-[var(--text-dim)] mb-1">
+                    <span>Zoom</span>
+                    <span className="font-bold text-[var(--text)]">{cropZoom.toFixed(1)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="3"
+                    step="0.1"
+                    value={cropZoom}
+                    onChange={e => setCropZoom(Number(e.target.value))}
+                    className={sliderClass}
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between text-[11px] text-[var(--text-dim)] mb-1">
+                    <span>Pan X</span>
+                    <span className="font-bold text-[var(--text)]">{cropX > 0 ? "+" : ""}{cropX}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-50"
+                    max="50"
+                    step="1"
+                    value={cropX}
+                    onChange={e => setCropX(Number(e.target.value))}
+                    className={sliderClass}
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between text-[11px] text-[var(--text-dim)] mb-1">
+                    <span>Pan Y</span>
+                    <span className="font-bold text-[var(--text)]">{cropY > 0 ? "+" : ""}{cropY}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-50"
+                    max="50"
+                    step="1"
+                    value={cropY}
+                    onChange={e => setCropY(Number(e.target.value))}
+                    className={sliderClass}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <button
+        disabled={busy}
+        onClick={() => onSave(name, photoUrl, cropZoom, cropX, cropY)}
+        className="mt-4 rounded-full bg-[var(--sfc-red)] px-6 py-2 text-white text-xs font-bold uppercase hover:brightness-110"
+      >
+        {busy ? "Saving..." : "Update"}
+      </button>
     </div>
   );
 }

@@ -9,6 +9,9 @@ type MinistryTeamDoc = {
   name: string;
   photoUrl: string;
   order: number;
+  cropZoom?: number;
+  cropX?: number;
+  cropY?: number;
 };
 
 type RoleKey =
@@ -16,7 +19,6 @@ type RoleKey =
   | "footballLead"
   | "formulaOneLead"
   | "devotionLead"
-  | "financeOfficer"
   | "marketingLead";
 
 const FALLBACK_ROLES: Array<{ key: RoleKey; role: string; initials: string }> = [
@@ -24,7 +26,6 @@ const FALLBACK_ROLES: Array<{ key: RoleKey; role: string; initials: string }> = 
   { key: "footballLead", role: "Football Lead", initials: "FL" },
   { key: "formulaOneLead", role: "Formula One Lead", initials: "F1" },
   { key: "devotionLead", role: "Devotion Lead", initials: "DL" },
-  { key: "financeOfficer", role: "Finance Officer", initials: "FO" },
   { key: "marketingLead", role: "Marketing Lead", initials: "ML" },
 ];
 
@@ -64,6 +65,9 @@ export default function AboutSection() {
             name: typeof data.name === "string" ? data.name : "",
             photoUrl: typeof data.photoUrl === "string" ? data.photoUrl : "",
             order: typeof data.order === "number" ? data.order : 0,
+            cropZoom: typeof data.cropZoom === "number" ? data.cropZoom : 1,
+            cropX: typeof data.cropX === "number" ? data.cropX : 0,
+            cropY: typeof data.cropY === "number" ? data.cropY : 0,
           };
         }
 
@@ -84,6 +88,9 @@ export default function AboutSection() {
         photoUrl: doc?.photoUrl || "",
         initials: initialsFromName(doc?.name || "") || r.initials,
         order: typeof doc?.order === "number" ? doc?.order : idx,
+        cropZoom: doc?.cropZoom ?? 1,
+        cropX: doc?.cropX ?? 0,
+        cropY: doc?.cropY ?? 0,
       };
     }).sort((a, b) => a.order - b.order);
   }, [team]);
@@ -154,8 +161,18 @@ PCEA St. Andrew&apos;s Church, Nairobi
           >
             <div className="w-14 h-14 rounded-full bg-[var(--surface2)] border border-[var(--border)] overflow-hidden flex items-center justify-center font-display text-lg mx-auto mb-3">
               {l.photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={l.photoUrl} alt={l.role} className="w-full h-full object-cover" />
+                <div className="w-full h-full overflow-hidden rounded-full">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={l.photoUrl}
+                    alt={l.role}
+                    className="w-full h-full"
+                    style={{
+                      objectFit: "cover",
+                      transform: `scale(${l.cropZoom}) translate(${l.cropX}px, ${l.cropY}px)`,
+                    }}
+                  />
+                </div>
               ) : (
                 <span>{l.initials}</span>
               )}

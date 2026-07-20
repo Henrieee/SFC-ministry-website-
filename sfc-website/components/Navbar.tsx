@@ -56,15 +56,7 @@ St. Andrew&apos;s Fan Club
           ))}
         </nav>
         <div className="relative flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--text)] transition hover:bg-[var(--surface2)]"
-            aria-label="Toggle theme"
-            title="Toggle theme"
-          >
-            {theme === "dark" ? "🌙" : "☀️"}
-          </button>
+          
           <button
             type="button"
             onClick={() => setMenuOpen((open) => !open)}

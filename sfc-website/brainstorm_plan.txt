@@ -1,0 +1,30 @@
+Plan to move About content onto homepage (after Upcoming events)
+
+Information Gathered:
+- `sfc-website/app/about/page.tsx` contains the About SFC layout (mission/vision, contact links, map iframe, leadership grid).
+- `sfc-website/app/page.tsx` is the homepage and currently renders: hero + Next Event card + “Visit us” CTA + “Upcoming events” grid.
+- `sfc-website/app/fan-zone/page.tsx` already redirects to `/predictor` (unrelated but confirms routing style).
+
+Plan:
+1) Create a reusable component (e.g. `sfc-website/components/AboutSection.tsx`) by moving the JSX from `app/about/page.tsx` into it.
+2) Update `sfc-website/app/page.tsx`:
+   - Import and render `<AboutSection />` directly after the Upcoming events section.
+   - Keep existing homepage markup intact.
+3) Update `sfc-website/app/about/page.tsx`:
+   - Repurpose it to only render `<AboutSection />` (so `/about` still works, but content is the same source).
+4) Update `sfc-website/TODO.md` checklist item status accordingly.
+5) Run `npm run lint` and `npm run build` in `sfc-website/`.
+6) Smoke test in browser:
+   - `/` shows About section after Upcoming events.
+   - `/about` still shows the same About section.
+
+Dependent Files to be edited:
+- sfc-website/app/page.tsx
+- sfc-website/app/about/page.tsx
+- sfc-website/components/AboutSection.tsx (new)
+- sfc-website/TODO.md
+
+Followup steps:
+- run lint/build
+- confirm layout and spacing in browser
+

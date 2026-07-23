@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { collection, doc, onSnapshot, orderBy, query, writeBatch } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -16,7 +16,8 @@ import AdminMinistryTeamManager from "@/app/admin/ministry-team";
 
 type Volunteer = { id: string; name: string; contact: string; ministries: string[] };
 type PrayerRequest = { id: string; name: string | null; text: string; anon: boolean };
-type AdminTab = "events" | "sports" | "predictor" | "devotionals" | "ministry" | "comms";
+type AdminUser = { id: string; displayName: string; email?: string; updatedAt?: unknown };
+type AdminTab = "events" | "sports" | "predictor" | "devotionals" | "ministry" | "comms" | "users";
 
 export default function AdminPage() {
   const { user, loading } = useAdminAuth();
@@ -28,6 +29,7 @@ export default function AdminPage() {
   // Database States
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [prayers, setPrayers] = useState<PrayerRequest[]>([]);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
 
   useEffect(() => {
     if (!loading && !user) router.push("/admin-login");
@@ -43,15 +45,34 @@ export default function AdminPage() {
       query(collection(db, "prayerRequests"), orderBy("submittedAt", "desc")),
       (snap) => setPrayers(snap.docs.map((d) => ({ id: d.id, ...d.data() } as PrayerRequest)))
     );
+    const unsubU = onSnapshot(
+      query(collection(db, "users"), orderBy("displayName", "asc")),
+      (snap) => setAdminUsers(snap.docs.map((d) => ({ id: d.id, ...d.data() } as AdminUser)))
+    );
     return () => {
       unsubV();
       unsubP();
+      unsubU();
     };
   }, [user]);
 
   async function handleSignOut() {
     await signOut(auth);
     router.push("/admin-login");
+  }
+
+  async function handleClearVolunteers() {
+    if (!confirm(`Delete all ${volunteers.length} volunteer sign-ups permanently?`)) return;
+    const batch = writeBatch(db);
+    volunteers.forEach((v) => batch.delete(doc(db, "volunteers", v.id)));
+    await batch.commit();
+  }
+
+  async function handleClearPrayers() {
+    if (!confirm(`Delete all ${prayers.length} prayer requests permanently?`)) return;
+    const batch = writeBatch(db);
+    prayers.forEach((p) => batch.delete(doc(db, "prayerRequests", p.id)));
+    await batch.commit();
   }
 
   if (loading || !user) {
@@ -90,6 +111,7 @@ export default function AdminPage() {
             { id: "predictor", label: "📊 Predictor game" },
             { id: "devotionals", label: "📖 Devotionals" },
             { id: "sidebar-ministry", idVal: "ministry", label: "👥 Ministry Team" },
+            { id: "users", label: "👤 Users" },
             { id: "comms", label: "📢 Requests & Volts" },
           ] as { id: string; idVal?: AdminTab; label: string }[]
         ).map((tab) => {
@@ -128,11 +150,45 @@ export default function AdminPage() {
 
         {activeTab === "ministry" && <AdminMinistryTeamManager />}
 
+        {activeTab === "users" && (
+          <div className="animate-fade-in">
+            <div className="border-b border-[var(--border)] pb-5 mb-8">
+              <h2 className="font-display text-xl text-[var(--text)]">Registered Users ({adminUsers.length})</h2>
+              <p className="text-xs text-[var(--text-dim)] mt-1">Users who have signed in with Google.</p>
+            </div>
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
+              {adminUsers.length === 0 ? (
+                <p className="text-sm text-[var(--text-dim)] py-2">No registered users yet.</p>
+              ) : (
+                <div className="space-y-1">
+                  {adminUsers.map((u) => (
+                    <div key={u.id} className="py-2.5 border-b border-[var(--border)] last:border-0">
+                      <div className="text-sm text-[var(--text)]">{u.displayName || "Unnamed"}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === "comms" && (
           <div className="space-y-8 animate-fade-in">
             <div>
-              <h2 className="font-display text-xl mb-1">Volunteers ({volunteers.length})</h2>
-              <p className="text-xs text-[var(--text-dim)] mb-4">Latest community sign-up lists.</p>
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h2 className="font-display text-xl mb-1">Volunteers ({volunteers.length})</h2>
+                  <p className="text-xs text-[var(--text-dim)]">Latest community sign-up lists.</p>
+                </div>
+                {volunteers.length > 0 && (
+                  <button
+                    onClick={handleClearVolunteers}
+                    className="rounded-full bg-red-950/40 border border-red-900/30 px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-900/40 transition shrink-0"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
                 {volunteers.length === 0 && (
                   <p className="text-sm text-[var(--text-dim)] py-2">No sign-ups yet.</p>
@@ -149,8 +205,20 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl mb-1">Prayer Requests ({prayers.length})</h2>
-              <p className="text-xs text-[var(--text-dim)] mb-4">Submitted requests from the community prayer wall.</p>
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h2 className="font-display text-xl mb-1">Prayer Requests ({prayers.length})</h2>
+                  <p className="text-xs text-[var(--text-dim)]">Submitted requests from the community prayer wall.</p>
+                </div>
+                {prayers.length > 0 && (
+                  <button
+                    onClick={handleClearPrayers}
+                    className="rounded-full bg-red-950/40 border border-red-900/30 px-4 py-2 text-xs font-bold text-red-400 hover:bg-red-900/40 transition shrink-0"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
                 {prayers.length === 0 && (
                   <p className="text-sm text-[var(--text-dim)] py-2">No requests yet.</p>

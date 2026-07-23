@@ -16,3 +16,8 @@
 - [x] Step 1: Modify `useUpcomingEvents.ts` to also fetch `footballFixtures` and `formulaOneRaces`
 - [x] Step 2: Merge, sort by date, and map to unified `UpcomingEvent` interface
 
+## New Task: User Management in Admin Panel
+- [x] Added Users tab with live list from Firestore `users` collection
+- [x] Each user shows UID and display name with a Remove button
+- [x] Remove deletes the user's profile document from Firestore
+

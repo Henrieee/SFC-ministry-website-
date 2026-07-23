@@ -29,7 +29,6 @@ const FALLBACK_ROLES: Array<{ key: RoleKey; role: string; initials: string }> = 
   { key: "devotionLead", role: "Devotion Lead", initials: "DL" },
   { key: "marketingLead", role: "Marketing Lead", initials: "ML" },
   { key: "sportsLiaison", role: "Sports Liaison", initials: "SL" },
-
 ];
 
 function initialsFromName(name: string) {
@@ -90,7 +89,7 @@ export default function AboutSection() {
         name: doc?.name || "",
         photoUrl: doc?.photoUrl || "",
         initials: initialsFromName(doc?.name || "") || r.initials,
-        order: typeof doc?.order === "number" ? doc?.order : idx,
+        order: idx,
         cropZoom: doc?.cropZoom ?? 1,
         cropX: doc?.cropX ?? 0,
         cropY: doc?.cropY ?? 0,

@@ -13,10 +13,11 @@ type MinistryTeamItem = {
   cropY?: number;
 };
 
-type MinistryRoleKey = "ministryCoordinator" | "footballLead" | "formulaOneLead" | "devotionLead" | "marketingLead";
+type MinistryRoleKey = "ministryCoordinator" | "footballLead" | "formulaOneLead" | "devotionLead" | "marketingLead" | "sportsLiaison";
 
 const ROLE_DOCS: Array<{ key: MinistryRoleKey; roleLabel: string }> = [
   { key: "ministryCoordinator", roleLabel: "Ministry Coordinator" },
+  { key: "sportsLiaison", roleLabel: "Sports Liaison" },
   { key: "footballLead", roleLabel: "Football Lead" },
   { key: "formulaOneLead", roleLabel: "Formula One Lead" },
   { key: "devotionLead", roleLabel: "Devotion Lead" },

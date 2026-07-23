@@ -16,33 +16,55 @@ type AdminEventDoc = {
 export default function AdminEventsManager() {
   const [events, setEvents] = useState<AdminEventDoc[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [error, setError] = useState<string>("");
 
 
   useEffect(() => {
     const q = query(collection(db, "events"), orderBy("date", "asc"));
     const unsub = onSnapshot(q, (snap) => {
-      setEvents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setEvents(snap.docs.map((d) => {
+        const { id: _discard, ...data } = d.data();
+        return { id: d.id, ...data };
+      }));
     });
     return () => unsub();
   }, []);
 
   async function handleAdd() {
-    const created = await addDoc(collection(db, "events"), {
-      ...NEXT_EVENT,
-      title: "New Event",
-    });
-    setEditingId(created.id);
+    try {
+      setError("");
+      const created = await addDoc(collection(db, "events"), {
+        ...NEXT_EVENT,
+        title: "New Event",
+      });
+      setEditingId(created.id);
+    } catch (err) {
+      console.error("Failed to add event:", err);
+      setError("Unable to create new event. Please try again.");
+    }
   }
 
   async function handleSave(id: string, data: Omit<AdminEventDoc, "id">) {
-    await setDoc(doc(db, "events", id), data, { merge: true });
-    setEditingId(null);
+    try {
+      setError("");
+      await setDoc(doc(db, "events", id), data, { merge: true });
+      setEditingId(null);
+    } catch (err) {
+      console.error("Failed to save event:", err);
+      setError("Unable to save event changes. Please try again.");
+    }
   }
 
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this event permanently?")) return;
-    await deleteDoc(doc(db, "events", id));
+    try {
+      setError("");
+      await deleteDoc(doc(db, "events", id));
+    } catch (err) {
+      console.error("Failed to delete event:", err);
+      setError("Unable to delete event. Please try again.");
+    }
   }
 
   return (
@@ -60,8 +82,12 @@ export default function AdminEventsManager() {
         </button>
       </div>
 
+      {error && (
+        <p className="bg-red-950/30 border border-red-900/50 text-red-400 text-xs font-bold rounded-xl px-4 py-3 mb-6">{error}</p>
+      )}
+
       <div className="grid gap-4">
-        {events.map((ev) => (
+        {events.filter(ev => ev.id !== "next-event").map((ev) => (
           <div key={ev.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 shadow-sm">
             {editingId === ev.id ? (
               <EventEditor 
@@ -115,8 +141,7 @@ function EventEditor({ ev, onSave, onCancel, onDelete }: { ev: AdminEventDoc; on
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        // Change line 118 to this:
-onSave({ id: crypto.randomUUID(), title, date: dateInput, venue, dateLabel, category });
+onSave({ id: ev.id, title, date: dateInput, venue, dateLabel, category });
       }}
       className="space-y-4"
     >

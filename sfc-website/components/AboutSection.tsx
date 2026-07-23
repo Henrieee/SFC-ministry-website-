@@ -16,6 +16,7 @@ type MinistryTeamDoc = {
 
 type RoleKey =
   | "ministryCoordinator"
+  | "sportsLiaison"
   | "footballLead"
   | "formulaOneLead"
   | "devotionLead"
@@ -27,6 +28,8 @@ const FALLBACK_ROLES: Array<{ key: RoleKey; role: string; initials: string }> = 
   { key: "formulaOneLead", role: "Formula One Lead", initials: "F1" },
   { key: "devotionLead", role: "Devotion Lead", initials: "DL" },
   { key: "marketingLead", role: "Marketing Lead", initials: "ML" },
+  { key: "sportsLiaison", role: "Sports Liaison", initials: "SL" },
+
 ];
 
 function initialsFromName(name: string) {

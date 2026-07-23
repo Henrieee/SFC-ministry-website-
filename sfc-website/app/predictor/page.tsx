@@ -510,39 +510,7 @@ export default function PredictorPage() {
             </div>
           </div>
 
-          {/* Visual Glassmorphism Pass Upgrade */}
-          <div className="mb-12 relative group max-w-sm">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-[var(--sfc-red)] to-red-900 rounded-2xl opacity-15 group-hover:opacity-30 blur-xl transition duration-500" />
-            <a href="/membership" className="relative block bg-[rgba(255,255,255,0.01)] backdrop-blur-md border border-[rgba(255,255,255,0.08)] rounded-2xl p-5 hover:border-[rgba(255,255,255,0.18)] transition-all duration-300">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <div className="text-[9px] uppercase tracking-[0.2em] font-bold text-[var(--sfc-red)] font-mono-sfc">SFC Digital Pass</div>
-                  <div className="text-base font-display text-[var(--text)] mt-1">{profile.displayName}</div>
-                </div>
-                <div className="w-9 h-7 rounded bg-amber-500/10 border border-amber-500/20 flex items-center justify-center opacity-80">
-                  <div className="grid grid-cols-2 gap-0.5 w-5 h-4 opacity-30">
-                    <div className="border border-amber-500/50"></div>
-                    <div className="border border-amber-500/50"></div>
-                    <div className="border border-amber-500/50"></div>
-                    <div className="border border-amber-500/50"></div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-between items-end">
-                <div className="text-[9px] font-mono-sfc text-[var(--text-dim)] tracking-wider">
-                  MEMBER ID: #{user.uid.slice(0, 8).toUpperCase()}
-                </div>
-                <div className="flex gap-[2px] items-center h-5 opacity-30">
-                  <div className="w-[1px] h-full bg-white"></div>
-                  <div className="w-[3px] h-full bg-white"></div>
-                  <div className="w-[1px] h-full bg-white"></div>
-                  <div className="w-[2px] h-full bg-white"></div>
-                  <div className="w-[4px] h-full bg-white"></div>
-                  <div className="w-[1px] h-full bg-white"></div>
-                </div>
-              </div>
-            </a>
-          </div>
+
 
           {/* Dashboard Grid Layout Split Container */}
           <div className="grid lg:grid-cols-12 gap-8 items-start">

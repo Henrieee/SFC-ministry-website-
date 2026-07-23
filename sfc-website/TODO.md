@@ -1,9 +1,18 @@
-# TODO
+# Admin Events Delete Fix - TODO
 
-- [ ] Merge Fan Zone UI into `app/predictor/page.tsx` (gallery, live poll, announcements, fan-of-the-week header)
-- [ ] Redirect `app/fan-zone/page.tsx` to `/predictor`
-- [x] Move `app/about/page.tsx` content into homepage after Upcoming events (and remove/repurpose /about route)
+## Completed Steps
+- [x] Analyzed root cause of delete not working
+- [x] Got user approval on plan
 
-- [ ] Run lint/build to ensure Next compiles
-- [ ] Smoke test in browser: `/` (About section visible after upcoming events) and ensure `/about` is handled as intended
+## Remaining Steps
+- [x] Step 1: Fix `EventEditor`'s `onSubmit` handler
+- [x] Step 2: Add try/catch error handling to `handleDelete` with `error` state
+- [x] Step 3: Add try/catch error handling to `handleSave` with `error` state
+- [x] Step 4: Add error state management and UI feedback
+- [x] Step 5: Strip stored `id` field from document data in onSnapshot (critical fix for delete not working)
+- [x] Step 6: Filter out `next-event` from Events Manager list
+
+## New Task: Link upcoming events to football fixtures and F1 races
+- [x] Step 1: Modify `useUpcomingEvents.ts` to also fetch `footballFixtures` and `formulaOneRaces`
+- [x] Step 2: Merge, sort by date, and map to unified `UpcomingEvent` interface
 

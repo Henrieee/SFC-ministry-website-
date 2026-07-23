@@ -10,6 +10,7 @@ import { useUpcomingEvents } from "@/hooks/useUpcomingEvents";
 import EventCard from "@/components/EventCard";
 
 const EVENT_ID = "next-event";
+const DEFAULT_TITLE = "Upcoming Event";
 
 const QUICK_LINKS = [
   { href: "/football", icon: "⚽", label: "Football" },
@@ -61,6 +62,16 @@ export default function Home() {
         </p>
 
         {/* Next Event Card */}
+        {event.title === DEFAULT_TITLE && event.venue === "TBD" ? (
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 max-w-sm">
+            <span className="font-mono-sfc text-[11px] uppercase tracking-wider text-[var(--sfc-red)] font-bold">
+              Next Event
+            </span>
+            <div className="mt-4 text-sm text-[var(--text-dim)] leading-relaxed">
+              No upcoming event scheduled — check back soon!
+            </div>
+          </div>
+        ) : (
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 max-w-sm">
           <span className="font-mono-sfc text-[11px] uppercase tracking-wider text-[var(--sfc-red)] font-bold">
             Next Event
@@ -88,6 +99,7 @@ export default function Home() {
             </button>
           </div>
         </div>
+        )}
 
         {/* Action Buttons */}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -120,7 +132,7 @@ export default function Home() {
 
         {/* Upcoming Events Section */}
         <div className="mt-8">
-          <h3 className="font-display text-lg mb-4 text-[var(--text)]">Upcoming events</h3>
+          <h3 className="font-display text-lg mb-4 text-[var(--text)]">Upcoming Watch Parties</h3>
           {/* Changed sm:grid-cols-2 to sm:grid-cols-3 to fit the third card */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {upcomingLoading

@@ -84,7 +84,18 @@ export default function AdminPredictorManager() {
         awayScore: number;
         points?: number;
       };
-      if (typeof data.points === "number") continue;
+
+      // If re-scoring, subtract old points from leaderboard first
+      if (fixture.resultEntered && typeof data.points === "number") {
+        await setDoc(
+          doc(db, "leaderboard", data.uid),
+          { displayName: data.displayName, points: increment(-data.points) },
+          { merge: true }
+        );
+      } else if (typeof data.points === "number") {
+        // Skip predictions already scored (first-time scoring)
+        continue;
+      }
 
       let points = 0;
       if (data.homeScore === actualHome && data.awayScore === actualAway) {
@@ -101,6 +112,41 @@ export default function AdminPredictorManager() {
       );
     }
     setBusy(null);
+  }
+
+  async function resetFootballFixture(fixture: FootballFixture) {
+    if (!window.confirm(`Reset "${fixture.home} vs ${fixture.away}" results and remove all its points from the leaderboard?`)) return;
+
+    setBusy(fixture.id);
+    try {
+      // Subtract points from leaderboard for all predictions on this fixture
+      const predictionsSnap = await getDocs(
+        query(collection(db, "footballPredictions"), where("fixtureId", "==", fixture.id))
+      );
+
+      for (const predDoc of predictionsSnap.docs) {
+        const data = predDoc.data() as { uid: string; displayName: string; points?: number };
+        if (typeof data.points === "number" && data.points > 0) {
+          await setDoc(
+            doc(db, "leaderboard", data.uid),
+            { displayName: data.displayName, points: increment(-data.points) },
+            { merge: true }
+          );
+        }
+        await updateDoc(doc(db, "footballPredictions", predDoc.id), { points: 0 });
+      }
+
+      // Reset the fixture results
+      await setDoc(
+        doc(db, "footballFixtures", fixture.id),
+        { actualHome: 0, actualAway: 0, resultEntered: false },
+        { merge: true }
+      );
+    } catch (err) {
+      console.error("Error resetting fixture:", err);
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function scoreF1Race(
@@ -133,7 +179,18 @@ export default function AdminPredictorManager() {
         dotd: string;
         points?: number;
       };
-      if (typeof data.points === "number") continue;
+
+      // If re-scoring, subtract old points from leaderboard first
+      if (race.resultEntered && typeof data.points === "number") {
+        await setDoc(
+          doc(db, "leaderboard", data.uid),
+          { displayName: data.displayName, points: increment(-data.points) },
+          { merge: true }
+        );
+      } else if (typeof data.points === "number") {
+        // Skip predictions already scored (first-time scoring)
+        continue;
+      }
 
       let points = 0;
       if (norm(data.pole) === norm(actualPole)) points += 1;
@@ -151,6 +208,41 @@ export default function AdminPredictorManager() {
     setBusy(null);
   }
 
+  async function resetF1Race(race: F1Race) {
+    if (!window.confirm(`Reset "${race.name}" results and remove all its points from the leaderboard?`)) return;
+
+    setBusy(race.id);
+    try {
+      // Subtract points from leaderboard for all predictions on this race
+      const predictionsSnap = await getDocs(
+        query(collection(db, "f1Predictions"), where("raceId", "==", race.id))
+      );
+
+      for (const predDoc of predictionsSnap.docs) {
+        const data = predDoc.data() as { uid: string; displayName: string; points?: number };
+        if (typeof data.points === "number" && data.points > 0) {
+          await setDoc(
+            doc(db, "leaderboard", data.uid),
+            { displayName: data.displayName, points: increment(-data.points) },
+            { merge: true }
+          );
+        }
+        await updateDoc(doc(db, "f1Predictions", predDoc.id), { points: 0 });
+      }
+
+      // Reset the race results
+      await setDoc(
+        doc(db, "formulaOneRaces", race.id),
+        { actualPole: "", actualWinner: "", actualFastestLap: "", actualDotd: "", resultEntered: false },
+        { merge: true }
+      );
+    } catch (err) {
+      console.error("Error resetting race:", err);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <div className="mb-10 animate-fade-in space-y-12">
       <div className="border-b border-[var(--border)] pb-5">
@@ -165,7 +257,13 @@ export default function AdminPredictorManager() {
         </div>
         <div className="grid gap-4">
           {fixtures.map((fixture) => (
-            <FootballResultRow key={fixture.id} fixture={fixture} busy={busy === fixture.id} onScore={scoreFootballFixture} />
+            <FootballResultRow
+              key={fixture.id}
+              fixture={fixture}
+              busy={busy === fixture.id}
+              onScore={scoreFootballFixture}
+              onReset={resetFootballFixture}
+            />
           ))}
         </div>
       </section>
@@ -177,7 +275,13 @@ export default function AdminPredictorManager() {
         </div>
         <div className="grid gap-4">
           {races.map((race) => (
-            <F1ResultRow key={race.id} race={race} busy={busy === race.id} onScore={scoreF1Race} />
+            <F1ResultRow
+              key={race.id}
+              race={race}
+              busy={busy === race.id}
+              onScore={scoreF1Race}
+              onReset={resetF1Race}
+            />
           ))}
         </div>
       </section>
@@ -189,10 +293,12 @@ function FootballResultRow({
   fixture,
   busy,
   onScore,
+  onReset,
 }: {
   fixture: FootballFixture;
   busy: boolean;
   onScore: (fixture: FootballFixture, actualHome: number, actualAway: number) => Promise<void>;
+  onReset: (fixture: FootballFixture) => Promise<void>;
 }) {
   const [home, setHome] = useState(fixture.actualHome?.toString() ?? "");
   const [away, setAway] = useState(fixture.actualAway?.toString() ?? "");
@@ -204,7 +310,7 @@ function FootballResultRow({
           <div className="text-sm font-bold text-[var(--text)] tracking-tight">{fixture.home} <span className="text-[var(--text-dim)] font-normal text-xs px-1">vs</span> {fixture.away}</div>
           <div className="font-mono-sfc text-[11px] text-[var(--text-dim)] mt-0.5">{new Date(fixture.date).toLocaleString()}</div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <input
             type="number"
@@ -223,18 +329,29 @@ function FootballResultRow({
           />
         </div>
       </div>
-      
+
       <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.03)] pt-4">
         {fixture.resultEntered ? (
           <span className="text-[10px] font-bold text-green-500 bg-green-950/30 px-2 py-1 rounded-md uppercase tracking-wider">Result Stored</span>
         ) : <div />}
-        <button
-          disabled={busy || home === "" || away === ""}
-          onClick={() => onScore(fixture, Number(home), Number(away))}
-          className="rounded-full bg-[var(--sfc-red)] text-white font-bold text-xs uppercase tracking-wider py-2 px-5 hover:brightness-110 active:scale-[0.98] transition disabled:opacity-50"
-        >
-          {fixture.resultEntered ? "Update Results" : "Save & Score"}
-        </button>
+        <div className="flex items-center gap-2">
+          {fixture.resultEntered && (
+            <button
+              disabled={busy}
+              onClick={() => onReset(fixture)}
+              className="rounded-full bg-amber-900/40 border border-amber-700/50 text-amber-400 font-bold text-xs uppercase tracking-wider py-2 px-4 hover:bg-amber-800/50 hover:text-amber-300 active:scale-[0.98] transition disabled:opacity-50"
+            >
+              Reset
+            </button>
+          )}
+          <button
+            disabled={busy || home === "" || away === ""}
+            onClick={() => onScore(fixture, Number(home), Number(away))}
+            className="rounded-full bg-[var(--sfc-red)] text-white font-bold text-xs uppercase tracking-wider py-2 px-5 hover:brightness-110 active:scale-[0.98] transition disabled:opacity-50"
+          >
+            {fixture.resultEntered ? "Update Results" : "Save & Score"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -244,10 +361,12 @@ function F1ResultRow({
   race,
   busy,
   onScore,
+  onReset,
 }: {
   race: F1Race;
   busy: boolean;
   onScore: (race: F1Race, actualPole: string, actualWinner: string, actualFastestLap: string, actualDotd: string) => Promise<void>;
+  onReset: (race: F1Race) => Promise<void>;
 }) {
   const [pole, setPole] = useState(race.actualPole ?? "");
   const [winner, setWinner] = useState(race.actualWinner ?? "");
@@ -260,7 +379,7 @@ function F1ResultRow({
         <div className="text-sm font-bold text-[var(--text)]">{race.name}</div>
         <div className="font-mono-sfc text-[11px] text-[var(--text-dim)] mt-0.5">{new Date(race.date).toLocaleString()}</div>
       </div>
-      
+
       <div className="grid gap-3 sm:grid-cols-2 mb-5">
         {[
           { label: "Pole Position", val: pole, set: setPole },
@@ -274,18 +393,29 @@ function F1ResultRow({
           </div>
         ))}
       </div>
-      
+
       <div className="flex items-center justify-between border-t border-[rgba(255,255,255,0.03)] pt-4">
         {race.resultEntered ? (
           <span className="text-[10px] font-bold text-green-500 bg-green-950/30 px-2 py-1 rounded-md uppercase tracking-wider">Result Stored</span>
         ) : <div />}
-        <button
-          disabled={busy || !pole.trim()}
-          onClick={() => onScore(race, pole, winner, fastestLap, dotd)}
-          className="rounded-full bg-[var(--sfc-red)] text-white font-bold text-xs uppercase tracking-wider py-2 px-5 hover:brightness-110 active:scale-[0.98] transition disabled:opacity-50"
-        >
-          {race.resultEntered ? "Update Results" : "Save & Score"}
-        </button>
+        <div className="flex items-center gap-2">
+          {race.resultEntered && (
+            <button
+              disabled={busy}
+              onClick={() => onReset(race)}
+              className="rounded-full bg-amber-900/40 border border-amber-700/50 text-amber-400 font-bold text-xs uppercase tracking-wider py-2 px-4 hover:bg-amber-800/50 hover:text-amber-300 active:scale-[0.98] transition disabled:opacity-50"
+            >
+              Reset
+            </button>
+          )}
+          <button
+            disabled={busy || !pole.trim()}
+            onClick={() => onScore(race, pole, winner, fastestLap, dotd)}
+            className="rounded-full bg-[var(--sfc-red)] text-white font-bold text-xs uppercase tracking-wider py-2 px-5 hover:brightness-110 active:scale-[0.98] transition disabled:opacity-50"
+          >
+            {race.resultEntered ? "Update Results" : "Save & Score"}
+          </button>
+        </div>
       </div>
     </div>
   );

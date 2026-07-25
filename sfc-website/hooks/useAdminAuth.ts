@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
-const ADMIN_EMAILS = ["henrygachau139@gmail.com"];
+const ADMIN_EMAILS = ["henrygachau139@gmail.com", "standsfanclub@gmail.com"];
 
 export function useAdminAuth() {
   const [user, setUser] = useState<User | null>(null);

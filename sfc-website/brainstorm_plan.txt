@@ -1,30 +1,50 @@
-Plan to move About content onto homepage (after Upcoming events)
+# Plan: Show Date and Time for Upcoming Events
 
-Information Gathered:
-- `sfc-website/app/about/page.tsx` contains the About SFC layout (mission/vision, contact links, map iframe, leadership grid).
-- `sfc-website/app/page.tsx` is the homepage and currently renders: hero + Next Event card + “Visit us” CTA + “Upcoming events” grid.
-- `sfc-website/app/fan-zone/page.tsx` already redirects to `/predictor` (unrelated but confirms routing style).
+## Information Gathered
 
-Plan:
-1) Create a reusable component (e.g. `sfc-website/components/AboutSection.tsx`) by moving the JSX from `app/about/page.tsx` into it.
-2) Update `sfc-website/app/page.tsx`:
-   - Import and render `<AboutSection />` directly after the Upcoming events section.
-   - Keep existing homepage markup intact.
-3) Update `sfc-website/app/about/page.tsx`:
-   - Repurpose it to only render `<AboutSection />` (so `/about` still works, but content is the same source).
-4) Update `sfc-website/TODO.md` checklist item status accordingly.
-5) Run `npm run lint` and `npm run build` in `sfc-website/`.
-6) Smoke test in browser:
-   - `/` shows About section after Upcoming events.
-   - `/about` still shows the same About section.
+### Current State:
+1. **`useUpcomingEvents.ts`**: Fetches from 3 collections (events, footballFixtures, formulaOneRaces), merges, sorts by date, returns `UpcomingEvent[]` with fields: `id`, `title`, `date` (ISO string), `venue`, `dateLabel`, `category`.
 
-Dependent Files to be edited:
-- sfc-website/app/page.tsx
-- sfc-website/app/about/page.tsx
-- sfc-website/components/AboutSection.tsx (new)
-- sfc-website/TODO.md
+2. **`EventCard.tsx`**: Displays an event card showing:
+   - Category badge
+   - Title
+   - Venue
+   - Countdown timer (Days, Hrs, Min, Sec)
+   - Attendance count + Attending button
+   - **MISSING: Formatted date/time display** - only shows countdown, no actual date/time text
 
-Followup steps:
-- run lint/build
-- confirm layout and spacing in browser
+3. **Home page (`page.tsx`)**: Next Event section shows:
+   - Title
+   - Venue
+   - dateLabel
+   - Countdown timer
+   - **MISSING: Formatted date/time for the next event**
+
+4. **Football page**: Shows fixtures with formatted date (e.g., "Sat, 15 Mar, 3:00 PM") and countdown - already has good date display
+5. **F1 page**: Shows races with formatted date and countdown - already has good date display
+
+### What Needs to Change:
+The task is to **show date and time for upcoming events** in the EventCard component and the homepage "Next Event" section. Currently:
+- `EventCard.tsx` shows a countdown but NO formatted date/time text
+- Home page "Next Event" shows countdown but NO formatted date/time text
+- Football and F1 pages already display dates properly
+
+## Plan
+
+### Step 1: Update `EventCard.tsx`
+Add a formatted date/time display line before the countdown, styled similarly to the football/f1 pages.
+
+### Step 2: Update Home page `page.tsx`
+Add a formatted date/time display in the "Next Event" section.
+
+### Step 3: Verify consistency
+Ensure the date formatting function is consistent across all components (use the same locale options).
+
+## Dependent Files to Edit
+1. `sfc-website/components/EventCard.tsx` - Add date/time display
+2. `sfc-website/app/page.tsx` - Add date/time display for Next Event
+
+## Follow-up Steps
+- No installations needed
+- No testing beyond visual verification
 

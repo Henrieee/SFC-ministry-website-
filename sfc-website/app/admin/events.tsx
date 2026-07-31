@@ -18,7 +18,6 @@ export default function AdminEventsManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string>("");
 
-
   useEffect(() => {
     const q = query(collection(db, "events"), orderBy("date", "asc"));
     const unsub = onSnapshot(q, (snap) => {
@@ -55,7 +54,6 @@ export default function AdminEventsManager() {
     }
   }
 
-
   async function handleDelete(id: string) {
     if (!confirm("Delete this event permanently?")) return;
     try {
@@ -74,8 +72,8 @@ export default function AdminEventsManager() {
           <h2 className="font-display text-xl text-[var(--text)]">Events Manager</h2>
           <p className="text-xs text-[var(--text-dim)] mt-1">Manage site-wide upcoming events.</p>
         </div>
-        <button 
-          onClick={handleAdd} 
+        <button
+          onClick={handleAdd}
           className="w-full sm:w-auto rounded-full bg-[var(--sfc-red)] px-6 py-3 text-white text-sm font-bold uppercase tracking-wider hover:brightness-110 active:scale-[0.98] transition"
         >
           Add New Event
@@ -87,34 +85,45 @@ export default function AdminEventsManager() {
       )}
 
       <div className="grid gap-4">
-        {events.filter(ev => ev.id !== "next-event").map((ev) => (
+        {events.map((ev) => (
           <div key={ev.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5 shadow-sm">
             {editingId === ev.id ? (
-              <EventEditor 
-                ev={ev} 
+              <EventEditor
+                ev={ev}
                 onSave={(d: AdminEventDoc) => handleSave(ev.id, d)}
-                onCancel={() => setEditingId(null)} 
-                onDelete={() => handleDelete(ev.id)} 
+                onCancel={() => setEditingId(null)}
+                onDelete={() => handleDelete(ev.id)}
               />
             ) : (
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="font-bold text-[var(--text)] text-base">{ev.title}</div>
-                  <div className="text-xs text-[var(--text-dim)] mt-1">{ev.dateLabel} • {ev.venue}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-bold text-[var(--text)] text-base">{ev.title}</div>
+                    {ev.id === "next-event" && (
+                      <span className="px-2 py-0.5 bg-[var(--sfc-red)] text-white text-[9px] font-bold rounded-full uppercase tracking-wider">HOME</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-[var(--text-dim)] mt-1">{ev.dateLabel} &bull; {ev.venue}</div>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                  <button 
-                    onClick={() => setEditingId(ev.id)} 
+                  <button
+                    onClick={() => setEditingId(ev.id)}
                     className="flex-1 sm:flex-none justify-center rounded-full px-5 py-2.5 bg-[var(--surface2)] text-xs font-bold text-[var(--text)] hover:bg-[var(--border)] transition"
                   >
                     Edit
                   </button>
-                  <button 
-                    onClick={() => handleDelete(ev.id)} 
-                    className="flex-1 sm:flex-none justify-center rounded-full px-5 py-2.5 bg-transparent border border-[var(--border)] text-xs font-bold text-red-400 hover:bg-red-950/20 transition"
-                  >
-                    Delete
-                  </button>
+                  {ev.id !== "next-event" ? (
+                    <button
+                      onClick={() => handleDelete(ev.id)}
+                      className="flex-1 sm:flex-none justify-center rounded-full px-5 py-2.5 bg-transparent border border-[var(--border)] text-xs font-bold text-red-400 hover:bg-red-950/20 transition"
+                    >
+                      Delete
+                    </button>
+                  ) : (
+                    <span className="flex-1 sm:flex-none rounded-full px-5 py-2.5 bg-transparent border border-dashed border-[var(--border)] text-xs font-bold text-[var(--text-dim)] text-center">
+                      System
+                    </span>
+                  )}
                 </div>
               </div>
             )}
@@ -132,8 +141,6 @@ function EventEditor({ ev, onSave, onCancel, onDelete }: { ev: AdminEventDoc; on
   const [dateLabel, setDateLabel] = useState(ev.dateLabel ?? "");
   const [category, setCategory] = useState(ev.category ?? "");
 
-
-  // Shared input class for consistency and touch-friendly sizing
   const inputClass = "w-full bg-[var(--surface2)] border border-[var(--border)] rounded-xl px-4 py-3.5 text-sm text-[var(--text)] focus:border-[var(--sfc-red)] outline-none transition";
   const labelClass = "block font-mono-sfc text-[10px] uppercase tracking-wider text-[var(--text-dim)] mb-1 pl-1";
 
@@ -141,7 +148,7 @@ function EventEditor({ ev, onSave, onCancel, onDelete }: { ev: AdminEventDoc; on
     <form
       onSubmit={(e) => {
         e.preventDefault();
-onSave({ id: ev.id, title, date: dateInput, venue, dateLabel, category });
+        onSave({ id: ev.id, title, date: dateInput, venue, dateLabel, category });
       }}
       className="space-y-4"
     >
@@ -172,10 +179,10 @@ onSave({ id: ev.id, title, date: dateInput, venue, dateLabel, category });
       </div>
 
       <div className="flex flex-col-reverse sm:flex-row items-center justify-between pt-4 border-t border-[rgba(255,255,255,0.03)] mt-6 gap-3">
-        <button 
-           type="button" 
-           onClick={onDelete} 
-           className="text-xs font-bold text-red-400 hover:text-red-300 transition px-4 py-2"
+        <button
+          type="button"
+          onClick={onDelete}
+          className="text-xs font-bold text-red-400 hover:text-red-300 transition px-4 py-2"
         >
           Delete Event
         </button>

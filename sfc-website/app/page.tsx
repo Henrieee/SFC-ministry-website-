@@ -82,7 +82,14 @@ export default function Home() {
             {event?.dateLabel ?? "Coming Soon"}
           </div>
           
-          {event?.date && <Countdown targetDate={event.date} />}
+          {event?.date && (
+            <>
+              <div className="text-[11px] text-[var(--text-dim)] mb-3 font-mono-sfc">
+                📅 {new Date(event.date).toLocaleString([], { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </div>
+              <Countdown targetDate={event.date} />
+            </>
+          )}
           
           <div className="flex items-center justify-between mt-4">
             <div className="font-mono-sfc text-xs text-[var(--text-dim)]">

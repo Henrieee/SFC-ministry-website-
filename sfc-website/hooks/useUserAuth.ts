@@ -6,6 +6,7 @@ import { auth, db } from "@/lib/firebase";
 
 export type UserProfile = {
   displayName: string;
+  email?: string;
 };
 
 export function useUserAuth() {
@@ -20,7 +21,22 @@ export function useUserAuth() {
 
         if (u) {
           const snap = await getDoc(doc(db, "users", u.uid));
-          setProfile(snap.exists() ? (snap.data() as UserProfile) : null);
+          if (snap.exists()) {
+            setProfile(snap.data() as UserProfile);
+          } else {
+            // New user – create a profile with email from auth
+            const email = u.email ?? "";
+            if (email) {
+              await setDoc(doc(db, "users", u.uid), {
+                displayName: u.displayName ?? "",
+                email,
+                updatedAt: serverTimestamp(),
+              }, { merge: true });
+              setProfile({ displayName: u.displayName ?? "", email });
+            } else {
+              setProfile(null);
+            }
+          }
         } else {
           setProfile(null);
         }
@@ -48,8 +64,13 @@ export function useUserAuth() {
 
   async function saveDisplayName(name: string) {
     if (!user) return;
-    await setDoc(doc(db, "users", user.uid), { displayName: name, updatedAt: serverTimestamp() }, { merge: true });
-    setProfile({ displayName: name });
+    const email = user.email ?? "";
+    await setDoc(doc(db, "users", user.uid), {
+      displayName: name,
+      email,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    setProfile({ displayName: name, email });
   }
 
   return { user, profile, loading, signIn, signOutUser, saveDisplayName };

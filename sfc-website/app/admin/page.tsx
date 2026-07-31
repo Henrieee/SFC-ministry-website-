@@ -154,18 +154,25 @@ export default function AdminPage() {
           <div className="animate-fade-in">
             <div className="border-b border-[var(--border)] pb-5 mb-8">
               <h2 className="font-display text-xl text-[var(--text)]">Registered Users ({adminUsers.length})</h2>
-              <p className="text-xs text-[var(--text-dim)] mt-1">Users who have signed in with Google.</p>
+              <p className="text-xs text-[var(--text-dim)] mt-1">Users who have signed in with Google. Each unique email shown once.</p>
             </div>
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-5">
               {adminUsers.length === 0 ? (
                 <p className="text-sm text-[var(--text-dim)] py-2">No registered users yet.</p>
               ) : (
                 <div className="space-y-1">
-                  {adminUsers.map((u) => (
-                    <div key={u.id} className="py-2.5 border-b border-[var(--border)] last:border-0">
-                      <div className="text-sm text-[var(--text)]">{u.displayName || "Unnamed"}</div>
-                    </div>
-                  ))}
+                  {adminUsers
+                    // Deduplicate by email — keep the first occurrence per unique email
+                    .filter((u, idx, arr) => {
+                      const email = u.email ?? u.id;
+                      return arr.findIndex((x) => (x.email ?? x.id) === email) === idx;
+                    })
+                    .map((u) => (
+                      <div key={u.id} className="py-2.5 border-b border-[var(--border)] last:border-0">
+                        <div className="text-sm text-[var(--text)]">{u.displayName || "Unnamed"}</div>
+                        <div className="text-xs text-[var(--text-dim)] mt-0.5">{u.email ?? "(no email)"}</div>
+                      </div>
+                    ))}
                 </div>
               )}
             </div>

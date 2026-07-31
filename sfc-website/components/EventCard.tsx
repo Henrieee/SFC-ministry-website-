@@ -42,6 +42,9 @@ export default function EventCard({ ev }: EventCardProps) {
         <div>
           <div className="font-display text-lg mb-1 truncate">{ev.title}</div>
           <div className="text-xs text-[var(--text-dim)] mb-3">{ev.venue}</div>
+          <div className="text-[11px] text-[var(--text-dim)] mb-2 font-mono-sfc">
+            📅 {new Date(targetDate).toLocaleString([], { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+          </div>
           <div className="mb-3">
             <Countdown targetDate={targetDate} />
           </div>
